@@ -1,35 +1,67 @@
 # Diabetes Classification Project
 
-This repository contains a machine learning final project that predicts diabetes outcome from clinical measurements in `diabetes.csv`. The main analysis is implemented in the Jupyter notebook `머신러닝_최종과제_이명지.ipynb`.
+This project uses machine learning to predict whether a person has diabetes.
 
-The diabetes workflow covers exploratory data analysis, missing-value handling, feature scaling, logistic regression training, model evaluation, and hyperparameter tuning with cross-validation. The notebook also includes a separate Hugging Face/Gemma news-classification exercise near the end.
+The main work is in:
+
+```text
+머신러닝_최종과제_이명지.ipynb
+```
+
+The data file is:
+
+```text
+diabetes.csv
+```
+
+## What This Project Does
+
+The project answers one main question:
+
+> Can we predict diabetes from health measurements like glucose, blood pressure, BMI, insulin, age, and pregnancy count?
+
+The notebook:
+
+1. Looks at the diabetes dataset
+2. Cleans unrealistic `0` values
+3. Scales the data
+4. Trains a Logistic Regression model
+5. Checks the model's accuracy and F1-score
+6. Tries hyperparameter tuning with cross-validation
 
 ## Dataset
 
-The project uses a diabetes classification dataset with 768 rows and 9 columns:
+The dataset has:
 
-| Column | Description |
+- 768 rows
+- 8 input features
+- 1 target column called `Outcome`
+
+`Outcome` means:
+
+| Value | Meaning |
 | --- | --- |
-| `Pregnancies` | Number of pregnancies |
-| `Glucose` | Plasma glucose concentration |
-| `BloodPressure` | Diastolic blood pressure |
-| `SkinThickness` | Triceps skin fold thickness |
-| `Insulin` | 2-hour serum insulin |
-| `BMI` | Body mass index |
-| `DiabetesPedigreeFunction` | Diabetes pedigree function |
-| `Age` | Age in years |
-| `Outcome` | Target label, where `0` means non-diabetic and `1` means diabetic |
+| `0` | No diabetes |
+| `1` | Diabetes |
 
-The target distribution is imbalanced:
+The dataset is not perfectly balanced:
 
-| Outcome | Count | Share |
-| --- | ---: | ---: |
-| `0` | 500 | 65.1% |
-| `1` | 268 | 34.9% |
+| Outcome | Count |
+| --- | ---: |
+| No diabetes | 500 |
+| Diabetes | 268 |
 
-The notebook found no explicit null values in the CSV file, but several medical fields contain `0` values that are not physiologically meaningful. These values are treated as missing data for:
+This matters because the model sees more non-diabetes examples than diabetes examples.
 
-| Column | Zero Values |
+## Data Cleaning
+
+Some columns had `0` values that do not make sense medically.
+
+For example, a person's blood pressure or BMI should not be `0`.
+
+These columns were cleaned:
+
+| Column | Number of `0` values |
 | --- | ---: |
 | `Glucose` | 5 |
 | `BloodPressure` | 35 |
@@ -37,77 +69,127 @@ The notebook found no explicit null values in the CSV file, but several medical 
 | `Insulin` | 374 |
 | `BMI` | 11 |
 
-## Preprocessing
+The notebook replaced those `0` values with missing values, then filled them using the training data:
 
-The preprocessing pipeline follows these steps:
+- Mean was used for `Glucose`, `BloodPressure`, and `BMI`
+- Median was used for `Insulin` and `SkinThickness`
 
-1. Split features and target:
-   - `X`: all columns except `Outcome`
-   - `y`: `Outcome`
-2. Replace `0` with `NaN` in `Glucose`, `BloodPressure`, `SkinThickness`, `Insulin`, and `BMI`.
-3. Split the data into training and test sets using:
-   - `test_size=0.2`
-   - `random_state=42`
-   - `stratify=y`
-4. Fill missing values using statistics calculated from the training set only:
-   - Mean imputation for `Glucose`, `BloodPressure`, and `BMI`
-   - Median imputation for `Insulin` and `SkinThickness`, because these columns show stronger outlier effects
-5. Scale features with `StandardScaler`:
-   - Fit on the training set
-   - Transform both training and test sets
+After that, the features were scaled with `StandardScaler`.
 
-The final split contains 614 training rows and 154 test rows.
+## Graphs
+
+The notebook made three graphs to understand the data:
+
+![Diabetes exploratory data analysis graphs](images/diabetes_eda.png)
+
+What the graphs show:
+
+- Many diabetes cases appear in younger and middle adult ages.
+- People with diabetes usually have higher glucose levels.
+- BMI and glucose do not show a simple straight-line relationship.
+- Glucose looks more strongly related to diabetes than BMI.
 
 ## Model
 
-The diabetes classifier uses scikit-learn's `LogisticRegression` for binary classification.
+The model used for diabetes prediction is:
 
-The first model uses the default logistic regression settings. The improved-model section then checks overfitting and applies `GridSearchCV` with 5-fold cross-validation to tune the L2 regularization strength:
-
-```python
-param_grid = {"C": [0.01, 0.1, 1, 10, 100]}
-grid_search = GridSearchCV(
-    estimator=model,
-    param_grid=param_grid,
-    cv=5,
-    scoring="f1",
-)
+```text
+Logistic Regression
 ```
 
-The best parameter found was `C=1`, which is also the default value for `LogisticRegression`.
+The data was split into:
 
-## Evaluation Results
+| Split | Rows |
+| --- | ---: |
+| Training data | 614 |
+| Test data | 154 |
 
-The notebook evaluates the model with accuracy and F1-score. Accuracy measures overall correctness, while F1-score is useful because the dataset has more non-diabetic cases than diabetic cases.
+The split used:
+
+- `test_size=0.2`
+- `random_state=42`
+- `stratify=y`
+
+## Results
+
+The first Logistic Regression model got:
+
+| Metric | Score |
+| --- | ---: |
+| Accuracy | 0.7078 |
+| F1-score | 0.5455 |
+
+That means the model correctly predicted about 70.8% of the test data.
+
+The F1-score is lower because predicting diabetes cases is harder than predicting non-diabetes cases.
+
+## Tuning
+
+The notebook also tried to improve the model with:
+
+- L2 regularization
+- 5-fold cross-validation
+- `GridSearchCV`
+
+It tested these `C` values:
+
+```text
+0.01, 0.1, 1, 10, 100
+```
+
+The best value was:
+
+```text
+C = 1
+```
+
+The tuned model had the same final test result:
 
 | Model | Accuracy | F1-score |
 | --- | ---: | ---: |
-| Baseline logistic regression | 0.7078 | 0.5455 |
-| Tuned logistic regression | 0.7078 | 0.5455 |
+| Original model | 0.7078 | 0.5455 |
+| Tuned model | 0.7078 | 0.5455 |
 
-The overfitting check for the baseline model reported:
+So tuning did not improve the score because the best value was already the model's default setting.
 
-| Split | Accuracy | F1-score |
-| --- | ---: | ---: |
-| Training | 0.7980 | 0.6737 |
-| Test | 0.7078 | 0.5455 |
+## Main Takeaways
 
-The best 5-fold cross-validation F1-score during tuning was `0.6539`.
+- Glucose was the most useful signal in the graphs.
+- The dataset has more non-diabetes examples than diabetes examples.
+- `Insulin` and `SkinThickness` had many missing-like `0` values.
+- The final model worked reasonably well, but it still struggled to identify diabetes cases.
+- Hyperparameter tuning confirmed that the default Logistic Regression setting was already the best option tested.
 
-## Key Findings
+## How to Run
 
-- `Glucose` is the clearest signal in the exploratory analysis. The diabetic group has a higher median glucose level, around 140 mg/dL, compared with about 107 mg/dL for the non-diabetic group.
-- BMI and glucose do not show a strong linear relationship in the scatter plot, but higher glucose values are associated with a higher concentration of diabetic cases.
-- `Insulin` and `SkinThickness` contain many `0` entries, so imputing them may remove some individual-level information from the original measurements.
-- Hyperparameter tuning did not improve the final test score because the best value, `C=1`, matched the default logistic regression setting.
-- The final model correctly classifies about 70.8% of the test set, but the lower F1-score shows that detecting diabetic cases remains harder than detecting non-diabetic cases.
+Install the main packages:
 
-## Project Structure
+```bash
+pip install numpy pandas matplotlib seaborn scikit-learn jupyter
+```
+
+Then open the notebook:
+
+```bash
+jupyter lab
+```
+
+Run:
+
+```text
+머신러닝_최종과제_이명지.ipynb
+```
+
+from top to bottom.
+
+## Project Files
 
 ```text
 .
 ├── README.md
 ├── diabetes.csv
+├── images/
+│   └── diabetes_eda.png
 ├── 머신러닝_최종과제_이명지.ipynb
 ├── pyproject.toml
 ├── uv.lock
@@ -116,42 +198,4 @@ The best 5-fold cross-validation F1-score during tuning was `0.6539`.
         └── __init__.py
 ```
 
-## Setup
-
-This project is configured with `uv` and a `pyproject.toml` file. The recorded project configuration uses Python `>=3.14`.
-
-Install dependencies with:
-
-```bash
-uv sync
-```
-
-Then launch the notebook from your preferred Jupyter environment. If Jupyter is available in the environment, you can run:
-
-```bash
-uv run jupyter lab
-```
-
-Open `머신러닝_최종과제_이명지.ipynb` and run the diabetes analysis cells from top to bottom.
-
-If you are not using `uv`, create a Python environment and install the main diabetes-analysis dependencies manually:
-
-```bash
-pip install numpy pandas matplotlib seaborn scikit-learn jupyter
-```
-
-The notebook's final Hugging Face section also uses:
-
-```bash
-pip install torch transformers accelerate huggingface-hub safetensors
-```
-
-## How to Run the Diabetes Classifier
-
-1. Make sure `diabetes.csv` is in the repository root.
-2. Start Jupyter with `uv run jupyter lab` if Jupyter is installed, or use another Jupyter launcher.
-3. Open `머신러닝_최종과제_이명지.ipynb`.
-4. Run the cells through the logistic regression and tuning sections.
-5. Compare the baseline and tuned model results in the printed evaluation table.
-
-The notebook is the source of truth for the current implementation and reported results.
+Note: the notebook also includes a separate Hugging Face/Gemma news classification exercise at the end.
